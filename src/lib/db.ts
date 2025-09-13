@@ -31,11 +31,37 @@ export async function initDatabase() {
         contact VARCHAR(20) NOT NULL,
         image TEXT NOT NULL,
         email_id TEXT NOT NULL,
+        createdBy VARCHAR(255) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
     
     await connection.execute(createTableQuery);
+    
+    // Check if createdBy column exists and add it if it doesn't
+    try {
+      const [columns] = await connection.execute(`
+        SELECT COLUMN_NAME 
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_SCHEMA = DATABASE() 
+        AND TABLE_NAME = 'schools' 
+        AND COLUMN_NAME = 'createdBy'
+      `);
+      
+      // If column doesn't exist, add it
+      if (!Array.isArray(columns) || columns.length === 0) {
+        await connection.execute(`
+          ALTER TABLE schools 
+          ADD COLUMN createdBy VARCHAR(255) NOT NULL DEFAULT 'system'
+        `);
+        console.log('Added createdBy column to existing schools table');
+      } else {
+        console.log('CreatedBy column already exists');
+      }
+    } catch (error) {
+      console.log('Error checking/adding createdBy column:', error);
+    }
+    
     connection.release();
     
     console.log('Database initialized successfully');
@@ -47,11 +73,23 @@ export async function initDatabase() {
 
 // Initialize database when this module is imported
 let isInitialized = false;
+let initPromise: Promise<void> | null = null;
+
 export async function ensureDatabaseInitialized() {
   if (!isInitialized) {
-    await initDatabase();
+    if (!initPromise) {
+      initPromise = initDatabase();
+    }
+    await initPromise;
     isInitialized = true;
   }
+}
+
+// Auto-initialize database on module import (only in development)
+if (process.env.NODE_ENV === 'development') {
+  ensureDatabaseInitialized().catch(error => {
+    console.error('Failed to initialize database on startup:', error);
+  });
 }
 
 // Get database connection
@@ -62,9 +100,6 @@ export async function getConnection() {
 // Execute query with parameters
 export async function executeQuery(query: string, params: any[] = []) {
   try {
-    // Ensure database is initialized before executing queries
-    await ensureDatabaseInitialized();
-    
     const [rows] = await pool.execute(query, params);
     return rows;
   } catch (error) {

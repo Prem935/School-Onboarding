@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
-import { Plus, Upload, ArrowLeft } from 'lucide-react';
+import { Plus, Upload, ArrowLeft, LogOut } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface FormData {
   name: string;
@@ -21,6 +22,14 @@ export default function AddSchool() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const router = useRouter();
+  const { user, token, logout, isLoading } = useAuth();
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isLoading && (!user || !token)) {
+      router.push('/login');
+    }
+  }, [user, token, isLoading, router]);
 
   const {
     register,
@@ -49,6 +58,9 @@ export default function AddSchool() {
 
       const response = await fetch('/api/addSchool', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
         body: formData,
       });
 
@@ -73,18 +85,49 @@ export default function AddSchool() {
     }
   };
 
+  // Show loading while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render if not authenticated (will redirect)
+  if (!user || !token) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <Link 
-            href="/"
-            className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-4"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Home
-          </Link>
+          <div className="flex justify-between items-start mb-4">
+            <Link 
+              href="/"
+              className="inline-flex items-center text-blue-600 hover:text-blue-800"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Home
+            </Link>
+            <div className="flex items-center space-x-4">
+              <span className="text-sm text-gray-600">
+                Logged in as: <strong>{user.email}</strong>
+              </span>
+              <button
+                onClick={logout}
+                className="inline-flex items-center text-red-600 hover:text-red-800 text-sm"
+              >
+                <LogOut className="w-4 h-4 mr-1" />
+                Logout
+              </button>
+            </div>
+          </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Add New School</h1>
           <p className="text-gray-600">Fill in the details below to add a new school</p>
         </div>

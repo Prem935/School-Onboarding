@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { executeQuery, ensureDatabaseInitialized } from '@/lib/db';
+import { executeQuery } from '@/lib/db';
 import { uploadImage } from '@/lib/cloudinary';
+import { withAuth } from '@/lib/middleware';
 
-export async function POST(request: NextRequest) {
+// Protected handler function
+async function addSchoolHandler(request: NextRequest, user: { email: string }) {
   try {
-    // Ensure database is initialized first
-    await ensureDatabaseInitialized();
-    
     const formData = await request.formData();
     
     // Extract form data
@@ -48,10 +47,10 @@ export async function POST(request: NextRequest) {
     const imageBuffer = Buffer.from(await imageFile.arrayBuffer());
     const imageUrl = await uploadImage(imageBuffer);
 
-    // Insert school data into database
+    // Insert school data into database with createdBy
     const insertQuery = `
-      INSERT INTO schools (name, address, city, state, contact, image, email_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO schools (name, address, city, state, contact, image, email_id, createdBy)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     await executeQuery(insertQuery, [
@@ -61,7 +60,8 @@ export async function POST(request: NextRequest) {
       state,
       contact,
       imageUrl,
-      email_id
+      email_id,
+      user.email // Set createdBy to the authenticated user's email
     ]);
 
     return NextResponse.json(
@@ -93,3 +93,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// Export the protected POST handler
+export const POST = withAuth(addSchoolHandler);

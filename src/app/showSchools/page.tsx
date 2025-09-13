@@ -13,6 +13,7 @@ interface School {
   contact: string;
   image: string;
   email_id: string;
+  createdBy: string;
   created_at: string;
 }
 
@@ -167,9 +168,14 @@ export default function ShowSchools() {
 
                   {/* Contact Info */}
                   <div className="border-t border-gray-100 pt-4">
-                    <div className="flex items-center justify-between text-sm text-gray-500">
-                      <span>Contact: {school.contact}</span>
-                      <span>{formatDate(school.created_at)}</span>
+                    <div className="space-y-2 text-sm text-gray-500">
+                      <div className="flex items-center justify-between">
+                        <span>Contact: {school.contact}</span>
+                        <span>{formatDate(school.created_at)}</span>
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        Added by: {school.createdBy}
+                      </div>
                     </div>
                   </div>
                 </div>

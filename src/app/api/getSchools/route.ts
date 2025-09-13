@@ -1,13 +1,10 @@
 import { NextResponse } from 'next/server';
-import { executeQuery, ensureDatabaseInitialized } from '@/lib/db';
+import { executeQuery } from '@/lib/db';
 
 export async function GET() {
   try {
-    // Ensure database is initialized first
-    await ensureDatabaseInitialized();
-    
     const query = `
-      SELECT id, name, address, city, state, contact, image, email_id, created_at
+      SELECT id, name, address, city, state, contact, image, email_id, createdBy, created_at
       FROM schools
       ORDER BY created_at DESC
     `;
